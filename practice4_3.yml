@@ -1,0 +1,73 @@
+---
+- hosts: web
+  vars:
+    package: httpd
+    package2: firewalld
+
+  tasks:
+  - name: install package
+    yum:
+      name: "{{ package }}"
+      state: installed
+
+  - name: stop package
+    service:
+      name: "{{ package }}"
+      state: stopped
+
+  - name: remove package
+    package:
+      name: "{{ package }}"
+      state: absent
+
+  - name: remove directory of /var/www/html
+    file:
+      path: /var/www/html
+      state: absent
+
+  - name: remove directory of /etc/httpd
+    file:
+      path: /etc/httpd
+      state: absent
+
+  - name: remove directory of /var/log/httpd
+    file:
+      path: /var/log/httpd
+      state: absent
+
+  - name: install package2
+    yum:
+      name: "{{ package2 }}"
+      state: latest
+
+  - name: set up firewalld
+    service:
+      name: firewalld
+      state: started
+      enabled: yes
+
+  - name: set up firewalld service http
+    firewalld:
+      service: http
+      permanent: yes
+      state: enabled
+      immediate: yes
+
+  - name: set up firewalld service https
+    firewalld:
+      service: https
+      permanent: yes
+      state: enabled
+      immediate: yes
+
+  - name: remove firewalld service http
+    firewalld:
+      service: http
+      state: disabled
+
+  - name: remove firewalld service https
+    firewalld:
+      service: https
+      state: disabled
+
+...

@@ -1,0 +1,94 @@
+---
+- hosts: web
+  vars:
+    package: httpd
+    package2: firewalld
+    supported_os: "RedHat"
+    supported_version: "7"
+# user descriptions
+#    username: web-admin
+#    group: wheel
+#    shell: "/bin/bash"
+    users:
+      - { name: 'web-admin', group: 'wheel', shell: '/bin/bash' }
+
+  tasks:
+  - fail:
+      msg: "The following OS_version is NOT supported."
+    when: 
+      - ansible_distribution != "{{ supported_os }}"
+      - ansible_distribution_major_version != "{{ supported_version }}"
+
+  - name: enforce SELinux
+    selinux:
+      policy: targeted
+      state: enforcing
+
+# magic variables - kernel version
+# magic variables - default ipv4 address
+# magic variables - nic(eth0) ipv4 address
+
+  - name: what is kernel version?
+    debug:
+      msg: "The kernel version is {{ ansible_kernel }}."
+
+  - name: what is default ipv4 address?
+    debug:
+      msg: "The default IPv4 address is {{ ansible_all_ipv4_addresses }}."
+
+#  - name: what is nic(eth0) ipv4 address?
+#    debug:
+#      msg: "The NIC(eth0) IPv4 address is {{ ansible_eth0.ipv4_address }}."
+
+  - name: create user
+    user:
+      name: "{{ item.name }}"
+      group: "{{ item.group }}"
+      shell: "{{ item.shell }}"
+      state: present
+      createhome: no
+    with_items: "{{ users }}"
+
+# disable root login by sshd
+  - name: root cannot login by sshd
+    lineinfile:
+      dest: /etc/ssh/sshd_config
+      line: 'PermitRootLogin no'
+      backup: yes
+    notify: restart sshd
+
+
+  - name: install httpd
+    yum:
+      name: "{{ package }}"
+      state: latest
+
+  - name: set up httpd
+    service:
+      name: "{{ package }}"
+      state: started
+      enabled: yes
+
+  - name: install firewalld
+    yum:
+      name: "{{ package2 }}"
+      state: latest
+
+  - name: set up firewalld
+    service:
+      name: "{{ package2 }}"
+      state: started
+      enabled: yes
+
+
+
+
+  handlers:
+  - name: restart sshd
+    systemd:
+      name: sshd
+      state: restarted
+
+
+
+...
